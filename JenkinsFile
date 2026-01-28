@@ -67,7 +67,7 @@ pipeline {
                     git config user.name "mohamed.hassan.abdalsabour@gmail.com"
                     
                     # Update deployment file
-                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" kubernetes/deployment.yml
+                    sed -i "s|\(image: mohamedhassan22/jenkins-repo:\).*|\1${BUILD_NUMBER}|" kubernetes/deployment.yml
                     
                     # Commit and push
                     git add .
