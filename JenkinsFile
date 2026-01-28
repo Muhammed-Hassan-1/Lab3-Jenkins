@@ -1,0 +1,83 @@
+pipeline {
+  agent {
+    docker {
+      image 'maven:3.9.6-eclipse-temurin-17'
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/jenkins/workspace:/var/lib/jenkins/workspace'
+    }
+  }
+  stages {
+    stage('Checkout') {
+      steps {
+        cleanWs()
+        sh 'echo passed'
+        git branch: 'main', url: 'https://github.com/Muhammed-Hassan-1/Lab3-Jenkins.git'
+      }
+    }
+    stage('Build and Test') {
+      steps {
+        sh 'ls -ltr'
+        sh 'pwd'
+        sh 'java -version'
+        sh 'mvn clean package'
+      }
+    }
+    stage('Static Code Analysis') {
+      environment {
+        SONAR_URL = "http://192.168.74.130:9000"
+      }
+      steps {
+        withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
+          sh 'mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+        }
+      }
+    }
+    stage('Build and Push Docker Image') {
+      environment {
+        DOCKER_IMAGE = "mohamedhassan22/jenkins-repo:${BUILD_NUMBER}"
+      }
+      steps {
+        script {
+            withCredentials([usernamePassword(credentialsId: 'docker-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                sh '''
+                    echo "Building Docker image..."
+                    docker build -t ${DOCKER_IMAGE} .
+                    echo "Logging into Docker Hub..."
+                    echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+                    echo "Pushing Docker image..."
+                    docker push ${DOCKER_IMAGE}
+                    docker logout
+                '''
+            }
+        }
+      }
+    }
+    stage('Update Deployment File') {
+        environment {
+            GIT_REPO_NAME = "Lab3-Jenkins"
+            GIT_USER_NAME = "Mohamed-Hassan-1"
+        }
+        steps {
+            withCredentials([string(credentialsId: '024cb37b-85d0-4456-b1a1-d16c53fc9a01', variable: 'GITHUB_TOKEN')]) {
+                sh '''
+                    # Fix git safe directory issue
+                    git config --global --add safe.directory ${WORKSPACE}
+                    
+                    # Configure git
+                    git config user.email "Mohamed-Hassan-1"
+                    git config user.name "mohamed.hassan.abdalsabour@gmail.com"
+                    
+                    # Update deployment file
+                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" kubernetes/deployment.yml
+                    
+                    # Commit and push
+                    git add .
+                    git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                    git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                '''
+            }
+        }
+    }
+  }
+}
+
+
