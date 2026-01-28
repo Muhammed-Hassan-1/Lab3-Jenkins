@@ -57,7 +57,7 @@ pipeline {
             GIT_USER_NAME = "Mohamed-Hassan-1"
         }
         steps {
-            withCredentials([string(credentialsId: '024cb37b-85d0-4456-b1a1-d16c53fc9a01', variable: 'GITHUB_TOKEN')]) {
+            withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                 sh '''
                     # Fix git safe directory issue
                     git config --global --add safe.directory ${WORKSPACE}
