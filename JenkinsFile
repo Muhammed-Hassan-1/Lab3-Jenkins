@@ -61,18 +61,24 @@ pipeline {
                 sh '''
                     # Fix git safe directory issue
                     git config --global --add safe.directory ${WORKSPACE}
-                    
-                    # Configure git
-                    git config user.email "Mohamed-Hassan-1"
-                    git config user.name "mohamed.hassan.abdalsabour@gmail.com"
-                    
-                    # Update deployment file
+
+                    # Configure git user
+                    git config user.email "mohamed.hassan.abdalsabour@gmail.com"
+                    git config user.name "Mohamed-Hassan-1"
+
+                    # Update image tag in deployment file
                     sed -i "s|image: mohamedhassan22/jenkins-repo:.*|image: mohamedhassan22/jenkins-repo:${BUILD_NUMBER}|" kubernetes/deployment.yml
-                    
+
+                    # Stage file
+                    git add kubernetes/deployment.yml
+
+                    # Skip commit if no changes
+                    git diff --cached --quiet && echo "No changes detected, skipping commit" && exit 0
+
                     # Commit and push
-                    git add .
                     git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-                    git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                    git remote set-url origin https://${GITHUB_TOKEN}@github.com/Muhammed-Hassan-1/Lab3-Jenkins.git
+                    git push origin HEAD:main
                 '''
             }
         }
